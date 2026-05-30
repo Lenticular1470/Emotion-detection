@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+*.pyc
+
+images.zip
+
+# Large datasets
+images/
+
+# Optional
+*.h5
+*.keras
