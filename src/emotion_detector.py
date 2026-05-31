@@ -1,6 +1,7 @@
 from tensorflow.keras.models import model_from_json
 import cv2
 import numpy as np
+import time
 
 # Load model
 with open("models/model.json", "r") as json_file:
@@ -8,6 +9,7 @@ with open("models/model.json", "r") as json_file:
 
 model.load_weights("models/model.weights.h5")
 
+# Emotion labels
 emotion_labels = [
     "Angry",
     "Disgust",
@@ -27,6 +29,11 @@ face_cascade = cv2.CascadeClassifier(
 # Webcam
 cap = cv2.VideoCapture(0)
 
+# Variables for stable prediction
+last_prediction_time = 0
+current_emotion = "Detecting..."
+current_confidence = 0
+
 while True:
 
     ret, frame = cap.read()
@@ -45,8 +52,20 @@ while True:
         minNeighbors=5
     )
 
+    # Face count
+    cv2.putText(
+        frame,
+        f"Detected Faces: {len(faces)}",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (255, 255, 255),
+        2
+    )
+
     for (x, y, w, h) in faces:
 
+        # Extract face
         face = gray[y:y+h, x:x+w]
 
         face = cv2.resize(
@@ -66,38 +85,71 @@ while True:
             axis=0
         )
 
-        prediction = model.predict(
-            face,
-            verbose=0
+        current_time = time.time()
+
+        # Predict only once every second
+        if current_time - last_prediction_time >= 1:
+
+            prediction = model.predict(
+                face,
+                verbose=0
+            )
+
+            emotion_index = np.argmax(
+                prediction
+            )
+
+            current_emotion = emotion_labels[
+                emotion_index
+            ]
+
+            current_confidence = (
+                np.max(prediction) * 100
+            )
+
+            last_prediction_time = current_time
+
+        label = (
+            f"{current_emotion} "
+            f"({current_confidence:.2f}%)"
         )
 
-        emotion = emotion_labels[
-            np.argmax(prediction)
-        ]
+        # Color based on confidence
+        if current_confidence > 90:
+            color = (0, 255, 0)
 
+        elif current_confidence > 70:
+            color = (0, 255, 255)
+
+        else:
+            color = (0, 0, 255)
+
+        # Draw face box
         cv2.rectangle(
             frame,
             (x, y),
-            (x+w, y+h),
-            (0,255,0),
+            (x + w, y + h),
+            color,
             2
         )
 
+        # Draw emotion label
         cv2.putText(
             frame,
-            emotion,
-            (x, y-10),
+            label,
+            (x, y - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0,255,0),
+            0.8,
+            color,
             2
         )
 
     cv2.imshow(
-        "Emotion Detection",
+        "Real-Time Emotion Detection",
         frame
     )
 
+    # Press Q to quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
