@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EmotionLens • Real-time Emotion Detection</title>
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1630;
+      --card: rgba(255,255,255,.08);
+      --card2: rgba(255,255,255,.12);
+      --text:#EAF1FF;
+      --muted: rgba(234,241,255,.72);
+      --shadow: 0 30px 100px rgba(0,0,0,.45);
+      --ring: rgba(124,92,255,.55);
+      --accent:#7C5CFF;
+      --accent2:#22D3EE;
+      --good:#22C55E;
+      --warn:#F59E0B;
+      --bad:#EF4444;
+      --radius: 18px;
+      --radius2: 26px;
+      --stroke: rgba(255,255,255,.16);
+      --light-bg: #F7FAFF;
+      --light-card: rgba(0,0,0,.04);
+      --light-text:#0B1220;
+      --light-muted: rgba(11,18,32,.62);
+      --light-stroke: rgba(11,18,32,.10);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(124,92,255,.35), transparent 60%),
+        radial-gradient(800px 500px at 80% 25%, rgba(34,211,238,.25), transparent 60%),
+        radial-gradient(900px 600px at 45% 95%, rgba(255,255,255,.06), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    body.light{
+      color: var(--light-text);
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(124,92,255,.18), transparent 60%),
+        radial-gradient(800px 500px at 80% 25%, rgba(34,211,238,.14), transparent 60%),
+        radial-gradient(900px 600px at 45% 95%, rgba(0,0,0,.03), transparent 55%),
+        linear-gradient(180deg, var(--light-bg), #EAF0FF);
+    }
+
+    .wrap{ max-width:1100px; margin:0 auto; padding: 28px 18px 40px; }
+
+    /* Header */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:14px; margin-bottom: 18px;
+    }
+
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      min-width: 240px;
+    }
+
+    .logo{
+      width:46px; height:46px; border-radius: 16px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,.6), transparent 45%),
+        linear-gradient(135deg, rgba(124,92,255,1), rgba(34,211,238,1));
+      box-shadow: 0 14px 45px rgba(124,92,255,.25);
+      position:relative;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.22);
+    }
+
+    .logo:after{
+      content:"";
+      position:absolute; inset:-40%;
+      background: conic-gradient(from 160deg, rgba(255,255,255,.0), rgba(255,255,255,.55), rgba(255,255,255,.0));
+      animation: spin 5.8s linear infinite;
+      opacity:.55;
+    }
+
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+
+    .brand h1{ margin:0; font-size: 16px; letter-spacing: .2px; }
+    .brand .sub{ margin:2px 0 0; font-size: 12px; color: var(--muted); }
+
+    body.light .brand .sub{ color: var(--light-muted); }
+
+    .actions{ display:flex; align-items:center; gap:10px; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      backdrop-filter: blur(10px);
+    }
+
+    body.light .pill{
+      background: rgba(255,255,255,.55);
+      border: 1px solid var(--light-stroke);
+      box-shadow: 0 12px 35px rgba(0,0,0,.06);
+    }
+
+    .toggle{
+      width: 42px; height: 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.09);
+      position:relative;
+      cursor:pointer;
+      user-select:none;
+      outline:none;
+    }
+    body.light .toggle{ border-color: var(--light-stroke); background: rgba(0,0,0,.05); }
+
+    .toggle .knob{
+      position:absolute; top:3px; left:3px;
+      width:20px; height:20px; border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.55));
+      box-shadow: 0 10px 20px rgba(0,0,0,.25);
+      transition: transform .25s ease;
+    }
+
+    .toggle.on .knob{ transform: translateX(16px); }
+
+    /* Layout */
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 16px;
+      align-items:start;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .brand{ min-width: unset; }
+    }
+
+    .card{
+      border-radius: var(--radius2);
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      overflow:hidden;
+      position:relative;
+    }
+
+    body.light .card{
+      background: var(--light-card);
+      border: 1px solid var(--light-stroke);
+      box-shadow: 0 24px 90px rgba(15, 23, 42, .10);
+    }
+
+    .card:before{
+      content:"";
+      position:absolute; inset:-1px;
+      background:
+        radial-gradient(500px 240px at 15% 0%, rgba(124,92,255,.28), transparent 55%),
+        radial-gradient(420px 220px at 90% 10%, rgba(34,211,238,.22), transparent 50%);
+      pointer-events:none;
+      opacity:.9;
+    }
+
+    .card > *{ position:relative; }
+
+    .panel{
+      padding: 18px;
+    }
+
+    /* Camera */
+    .cameraWrap{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .videoStage{
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      overflow:hidden;
+      position:relative;
+      min-height: 360px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    body.light .videoStage{
+      border-color: rgba(11,18,32,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.25));
+    }
+
+    video{
+      width:100%; height:100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display:block;
+    }
+
+    .overlay{
+      position:absolute; inset:0;
+      pointer-events:none;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.34));
+    }
+
+    .overlayBar{
+      width: 100%;
+      max-width: 560px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+    }
+
+    body.light .overlayBar{
+      background: rgba(255,255,255,.58);
+      border-color: rgba(11,18,32,.10);
+    }
+
+    .tag{
+      display:flex; flex-direction:column; gap:2px;
+    }
+
+    .tag .k{ font-size: 11px; color: rgba(255,255,255,.75); letter-spacing:.2px; }
+    body.light .tag .k{ color: rgba(11,18,32,.62); }
+
+    .tag .v{ font-size: 14px; font-weight: 650; letter-spacing:.2px; }
+
+    .statusDot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 0 6px rgba(245,158,11,.15);
+      flex: 0 0 auto;
+    }
+    .statusDot.good{ background: var(--good); box-shadow: 0 0 0 6px rgba(34,197,94,.16); }
+    .statusDot.bad{ background: var(--bad); box-shadow: 0 0 0 6px rgba(239,68,68,.16); }
+
+    /* Controls */
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    button{
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 620;
+      letter-spacing:.2px;
+      cursor:pointer;
+      transition: transform .12s ease, background .15s ease, border-color .15s ease;
+      display:inline-flex; align-items:center; gap:10px;
+      backdrop-filter: blur(10px);
+    }
+
+    body.light button{
+      background: rgba(255,255,255,.65);
+      border-color: rgba(11,18,32,.10);
+      color: var(--light-text);
+    }
+
+    button:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.12); }
+    body.light button:hover{ border-color: rgba(11,18,32,.18); background: rgba(255,255,255,.82); }
+
+    button.primary{
+      border-color: rgba(124,92,255,.45);
+      background: linear-gradient(135deg, rgba(124,92,255,.35), rgba(34,211,238,.20));
+    }
+
+    .btnIcon{
+      width: 18px; height: 18px; display:inline-block;
+    }
+
+    .sliderBlock{
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    body.light .sliderBlock{
+      background: rgba(255,255,255,.55);
+      border-color: rgba(11,18,32,.10);
+    }
+
+    input[type="range"]{ width: 140px; }
+    .small{
+      font-size: 12px; color: var(--muted);
+    }
+    body.light .small{ color: var(--light-muted); }
+
+    /* Right panel */
+    .sidePanel{ padding: 16px; }
+
+    .meter{
+      display:flex; flex-direction:column; gap: 10px;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+    }
+
+    body.light .meter{
+      background: rgba(255,255,255,.55);
+      border-color: rgba(11,18,32,.10);
+    }
+
+    .meter h2{ margin:0; font-size: 14px; }
+
+    .bigEmotion{
+      font-size: 22px;
+      font-weight: 760;
+      letter-spacing:.2px;
+      line-height: 1.1;
+      margin-top: 2px;
+    }
+
+    .confidence{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    body.light .confidence{ color: var(--light-muted); }
+
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    body.light .bar{ background: rgba(0,0,0,.06); border-color: rgba(11,18,32,.10); }
+
+    .bar > div{
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(124,92,255,1), rgba(34,211,238,1));
+      border-radius: 999px;
+      transition: width .2s ease;
+    }
+
+    .list{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    body.light .row{ background: rgba(255,255,255,.45); border-color: rgba(11,18,32,.10); }
+
+    .row .label{ font-size: 12px; color: var(--muted); }
+    body.light .row .label{ color: var(--light-muted); }
+
+    .row .pct{ font-size: 12px; font-weight: 700; }
+
+    .hint{
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    body.light .hint{ color: var(--light-muted); }
+
+    .footer{
+      margin-top: 14px;
+      font-size: 11px;
+      color: rgba(234,241,255,.58);
+    }
+    body.light .footer{ color: rgba(11,18,32,.52); }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(12px);
+      color: var(--text);
+      box-shadow: 0 20px 70px rgba(0,0,0,.35);
+      display:none;
+      z-index: 999;
+      max-width: min(720px, calc(100vw - 24px));
+      font-size: 12px;
+      line-height:1.35;
+    }
+    body.light .toast{ background: rgba(255,255,255,.8); color: var(--light-text); border-color: rgba(11,18,32,.10); }
+    .toast.show{ display:block; animation: pop .18s ease; }
+    @keyframes pop{ from{ transform: translateX(-50%) translateY(6px); opacity:.3;} to{ transform: translateX(-50%) translateY(0); opacity:1;} }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .logo:after{ animation:none; }
+      button, .bar > div{ transition:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>EmotionLens</h1>
+          <div class="sub">Real-time facial emotion detection • Webcam + your trained model</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="pill" title="Switch theme">
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <div style="font-size:12px; font-weight:700;">Theme</div>
+            <div class="small" id="themeLabel">Dark</div>
+          </div>
+          <div class="toggle" id="themeToggle" role="switch" aria-checked="false" tabindex="0">
+            <div class="knob"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left: Camera -->
+      <section class="card" aria-label="Camera and detection">
+        <div class="cameraWrap">
+          <div class="videoStage" id="stage">
+            <video id="video" playsinline autoplay muted></video>
+            <div class="overlay">
+              <div class="overlayBar">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div class="statusDot" id="statusDot"></div>
+                  <div class="tag">
+                    <div class="k" id="statusK">Status</div>
+                    <div class="v" id="statusV">Click Start to enable camera</div>
+                  </div>
+                </div>
+
+                <div class="tag" style="text-align:right;">
+                  <div class="k">Prediction</div>
+                  <div class="v" id="predV">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="btnRow">
+              <button class="primary" id="startBtn" type="button">
+                <span class="btnIcon" aria-hidden="true">🎥</span>
+                Start
+              </button>
+              <button id="stopBtn" type="button" disabled>
+                <span class="btnIcon" aria-hidden="true">⏹</span>
+                Stop
+              </button>
+              <button id="snapBtn" type="button" disabled>
+                <span class="btnIcon" aria-hidden="true">📸</span>
+                Snapshot
+              </button>
+            </div>
+
+            <div class="sliderBlock" title="How often to run prediction">
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <div style="font-size:12px; font-weight:800;">Predict every</div>
+                <div class="small"><span id="fpsLabel">600</span> ms</div>
+              </div>
+              <input id="interval" type="range" min="300" max="1500" step="50" value="600" />
+            </div>
+          </div>
+
+          <canvas id="canvas" style="display:none"></canvas>
+        </div>
+      </section>
+
+      <!-- Right: Results -->
+      <aside class="card">
+        <div class="sidePanel">
+          <div class="meter">
+            <h2>Detected Emotion</h2>
+            <div class="bigEmotion" id="emotionName">—</div>
+            <div class="confidence" id="emotionConfidence">Confidence: —</div>
+            <div class="bar" aria-label="confidence bar"><div id="confBar"></div></div>
+
+            <div class="list" aria-label="emotion probabilities">
+              <!-- rows injected by JS -->
+            </div>
+
+            <div class="hint" id="serverHint">
+              Connected to your local Flask backend. Start the camera and keep your face centered for the model.
+              <br/><br/>
+            </div>
+          </div>
+
+          <div class="footer">
+            Tip: For best accuracy, keep your face centered and well-lit.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const emotionLabels = ["Angry","Disgust","Fear","Happy","Neutral","Sad","Surprise"];
+
+    // =============================
+    // Backend integration
+    // =============================
+    // This page calls the local Flask API in src/api.py to perform inference.
+    //
+    // Expected request:
+    //   POST API_URL with JSON: { image: "dataURL" }
+    // Expected response:
+    //   { probabilities: number[7] }  // in same order as emotionLabels
+    // Optionally:
+    //   { emotion: string, confidence: number, probabilities: number[7] }
+    //
+    const API_URL = "/predict";
+
+    // =============================
+    // UI elements
+    // =============================
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const snapBtn = document.getElementById('snapBtn');
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const emotionName = document.getElementById('emotionName');
+    const emotionConfidence = document.getElementById('emotionConfidence');
+    const confBar = document.getElementById('confBar');
+    const predV = document.getElementById('predV');
+
+    const statusDot = document.getElementById('statusDot');
+    const statusV = document.getElementById('statusV');
+    const statusK = document.getElementById('statusK');
+
+    const interval = document.getElementById('interval');
+    const fpsLabel = document.getElementById('fpsLabel');
+
+    const toast = document.getElementById('toast');
+
+    // Build probability rows
+    const list = document.querySelector('.list');
+    const pctEls = new Map();
+    for (const label of emotionLabels) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const left = document.createElement('div');
+      left.className = 'label';
+      left.textContent = label;
+
+      const right = document.createElement('div');
+      right.className = 'pct';
+      right.textContent = '—';
+
+      row.appendChild(left);
+      row.appendChild(right);
+      list.appendChild(row);
+      pctEls.set(label, right);
+    }
+
+    let stream = null;
+    let running = false;
+    let lastRun = 0;
+    let intervalMs = Number(interval.value);
+    let predictAbort = null;
+
+    interval.addEventListener('input', () => {
+      intervalMs = Number(interval.value);
+      fpsLabel.textContent = intervalMs;
+    });
+
+    function setStatus(kind, title, subtitle){
+      statusK.textContent = title;
+      statusV.textContent = subtitle;
+      statusDot.classList.remove('good','bad');
+      if (kind === 'good') statusDot.classList.add('good');
+      if (kind === 'bad') statusDot.classList.add('bad');
+    }
+
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove('show'), 3200);
+    }
+
+    async function startCamera(){
+      try{
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        running = true;
+        lastRun = 0;
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        snapBtn.disabled = false;
+
+        setStatus('good','Camera','Running… detecting emotions');
+        requestAnimationFrame(loop);
+      }catch(err){
+        running = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        snapBtn.disabled = true;
+        setStatus('bad','Camera blocked','Permission denied or no webcam found');
+        showToast(err?.message ? err.message : String(err));
+      }
+    }
+
+    function stopCamera(){
+      running = false;
+      if (predictAbort) predictAbort.abort();
+      predictAbort = null;
+
+      if (stream){
+        for (const track of stream.getTracks()) track.stop();
+      }
+      stream = null;
+      video.srcObject = null;
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      snapBtn.disabled = true;
+
+      setStatus('bad','Camera','Stopped');
+      predV.textContent = '—';
+    }
+
+    function captureFrameDataURL(){
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 480;
+      // Create a smaller frame for speed
+      const targetW = 480;
+      const scale = targetW / w;
+      const targetH = Math.round(h * scale);
+
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      // Mirror preview (we are mirroring video via CSS transform, so keep image consistent)
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -targetW, 0, targetW, targetH);
+      ctx.restore();
+
+      // JPEG for smaller payload
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    async function predictOnce(){
+      const now = performance.now();
+      if (now - lastRun < intervalMs) return;
+      lastRun = now;
+
+      // If no backend, keep UI responsive
+      if (!API_URL){
+        setStatus('bad','Model','API_URL is not configured');
+        return;
+      }
+
+      try{
+        setStatus('good','Model','Analyzing frame…');
+
+        if (predictAbort) predictAbort.abort();
+        predictAbort = new AbortController();
+
+        const image = captureFrameDataURL();
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image }),
+          signal: predictAbort.signal
+        });
+
+        if (!res.ok){
+          const errorData = await res.json().catch(() => ({}));
+          if (res.status === 422 && errorData.faceDetected === false) {
+            setStatus('bad','Model','No face detected');
+            predV.textContent = 'No face';
+            return;
+          }
+          throw new Error(errorData.error || `API error: ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+
+        // Normalize response
+        let probabilities = data.probabilities;
+        if (!Array.isArray(probabilities)) probabilities = data.probs || data.scores;
+
+        if (!Array.isArray(probabilities) || probabilities.length !== emotionLabels.length){
+          // Fallback: if backend returns emotion/confidence only
+          if (typeof data.emotion === 'string') {
+            emotionName.textContent = data.emotion;
+            const conf = typeof data.confidence === 'number' ? data.confidence : null;
+            emotionConfidence.textContent = conf == null ? 'Confidence: —' : `Confidence: ${conf.toFixed(2)}%`;
+            confBar.style.width = conf == null ? '0%' : `${Math.max(0, Math.min(100, conf))}%`;
+            predV.textContent = data.emotion;
+            setStatus('good','Model','Prediction updated');
+            return;
+          }
+          throw new Error('Bad API response: expected probabilities[7].');
+        }
+
+        const maxIdx = probabilities.reduce((best, v, i) => (v > probabilities[best] ? i : best), 0);
+        const bestEmotion = emotionLabels[maxIdx];
+        const bestProb = probabilities[maxIdx];
+
+        // Update UI
+        emotionName.textContent = bestEmotion;
+        const confPct = bestProb * 100;
+        emotionConfidence.textContent = `Confidence: ${confPct.toFixed(2)}%`;
+        confBar.style.width = `${Math.max(0, Math.min(100, confPct))}%`;
+        predV.textContent = `${bestEmotion} (${confPct.toFixed(1)}%)`;
+
+        for (let i = 0; i < emotionLabels.length; i++){
+          const lbl = emotionLabels[i];
+          const pct = probabilities[i] * 100;
+          pctEls.get(lbl).textContent = `${pct.toFixed(1)}%`;
+        }
+
+        // Status dot by confidence
+        if (confPct >= 80) setStatus('good','Model','High confidence');
+        else if (confPct >= 55) setStatus('good','Model','Medium confidence');
+        else setStatus('bad','Model','Low confidence');
+      }catch(err){
+        setStatus('bad','Model','Waiting for backend…');
+        showToast(err?.message ? err.message : String(err));
+      }
+    }
+
+    function loop(){
+      if (!running) return;
+      predictOnce();
+      requestAnimationFrame(loop);
+    }
+
+    startBtn.addEventListener('click', startCamera);
+    stopBtn.addEventListener('click', stopCamera);
+
+    snapBtn.addEventListener('click', async () => {
+      if (!running) return;
+      await predictOnce();
+    });
+
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+
+    function applyTheme(isLight){
+      document.body.classList.toggle('light', isLight);
+      themeToggle.classList.toggle('on', isLight);
+      themeToggle.setAttribute('aria-checked', String(isLight));
+      themeLabel.textContent = isLight ? 'Light' : 'Dark';
+    }
+
+    let stored = false;
+    try{
+      stored = localStorage.getItem('theme') === 'light';
+    }catch{}
+    applyTheme(stored);
+
+    function toggleTheme(){
+      const isLight = !document.body.classList.contains('light');
+      applyTheme(isLight);
+      try{ localStorage.setItem('theme', isLight ? 'light' : 'dark'); }catch{}
+    }
+
+    themeToggle.addEventListener('click', toggleTheme);
+    themeToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleTheme();
+      }
+    });
+
+    // Initial state
+    setStatus('bad','Status','Click Start to enable camera');
+    predV.textContent = '—';
+  </script>
+</body>
+</html>
+

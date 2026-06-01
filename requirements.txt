@@ -6,3 +6,5 @@ jupyter
 notebook
 tqdm
 opencv-contrib-python
+Flask
+flask-cors
