@@ -1,8 +1,8 @@
 # Deployment
 
-## Frontend on Vercel
+## Full App on Vercel
 
-Deploy the project root to Vercel. The `.vercelignore` file keeps the Python backend, virtual environment, and model weights out of the Vercel upload so Vercel only serves the static frontend.
+Deploy the project root to Vercel. Vercel uses `src/app.py` as the Flask entrypoint, which imports the app from `src/api.py`.
 
 ```powershell
 npm install -g vercel
@@ -10,39 +10,13 @@ vercel login
 vercel
 ```
 
-After your backend is deployed, open the Vercel URL once with the backend URL:
+Health check URL after deployment:
 
 ```text
-https://your-vercel-site.vercel.app/?api=https://your-backend-url
+https://your-vercel-site.vercel.app/health
 ```
 
-The page stores that backend URL in local storage and will call:
-
-```text
-https://your-backend-url/predict
-```
-
-## Backend on Render or Railway
-
-Use the same repository for the backend service, but configure the service as a Python web service.
-
-Build command:
-
-```bash
-pip install -r requirements.txt
-```
-
-Start command:
-
-```bash
-gunicorn src.api:app
-```
-
-Health check path:
-
-```text
-/health
-```
+If Vercel fails because the TensorFlow/OpenCV bundle is too large, deploy the backend on Render or Railway with `gunicorn src.api:app` and deploy only the static frontend on Vercel.
 
 ## Local Run
 

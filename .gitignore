@@ -12,3 +12,6 @@ images/
 # Optional
 *.h5
 *.keras
+
+!models/
+!models/model.weights.h5
