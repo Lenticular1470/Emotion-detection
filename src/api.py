@@ -1,4 +1,5 @@
 import base64
+import os
 from pathlib import Path
 
 import cv2
@@ -75,6 +76,11 @@ def index():
     return send_from_directory(ROOT, "index.html")
 
 
+@app.get("/health")
+def health():
+    return jsonify({"ok": True})
+
+
 @app.post("/predict")
 def predict():
     payload = request.get_json(silent=True) or {}
@@ -105,4 +111,5 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8000, debug=False)
+    port = int(os.environ.get("PORT", "8000"))
+    app.run(host="0.0.0.0", port=port, debug=False)

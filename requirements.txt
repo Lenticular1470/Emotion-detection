@@ -1,10 +1,6 @@
 tensorflow
-keras
 numpy
-pandas
-jupyter
-notebook
-tqdm
-opencv-contrib-python
 Flask
 flask-cors
+gunicorn
+opencv-python-headless

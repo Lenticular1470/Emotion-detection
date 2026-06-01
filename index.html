@@ -555,7 +555,24 @@
     // Optionally:
     //   { emotion: string, confidence: number, probabilities: number[7] }
     //
-    const API_URL = "/predict";
+    function getApiUrl(){
+      const params = new URLSearchParams(window.location.search);
+      const urlFromQuery = params.get('api');
+
+      if (urlFromQuery) {
+        try{ localStorage.setItem('apiUrl', urlFromQuery); }catch{}
+        return urlFromQuery.replace(/\/$/, '') + '/predict';
+      }
+
+      let savedUrl = '';
+      try{ savedUrl = localStorage.getItem('apiUrl') || ''; }catch{}
+      if (savedUrl) return savedUrl.replace(/\/$/, '') + '/predict';
+
+      const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      return isLocal ? '/predict' : '';
+    }
+
+    const API_URL = getApiUrl();
 
     // =============================
     // UI elements

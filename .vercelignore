@@ -1,0 +1,11 @@
+.git
+.ipynb_checkpoints
+.venv
+images
+models
+spam
+src
+test
+requirements.txt
+Procfile
+*.ipynb
