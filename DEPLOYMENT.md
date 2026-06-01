@@ -29,7 +29,7 @@ Vercel cannot host this backend because TensorFlow/OpenCV exceed Vercel's 500 MB
 Build command:
 
 ```bash
-pip install -r requirements.txt
+pip install -r backend-requirements.txt
 ```
 
 Start command:
@@ -48,7 +48,7 @@ Health check path:
 
 ```powershell
 cd C:\student-project\emotion-detection
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r backend-requirements.txt
 .\.venv\Scripts\python.exe src\api.py
 ```
 

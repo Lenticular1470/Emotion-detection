@@ -7,6 +7,6 @@ models
 spam
 src
 test
-requirements.txt
+backend-requirements.txt
 Procfile
 *.ipynb
