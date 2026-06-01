@@ -39,7 +39,7 @@ Vercel cannot host this backend because TensorFlow/OpenCV exceed Vercel's 500 MB
 Build command:
 
 ```bash
-pip install -r backend-requirements.txt
+python -m pip install --upgrade pip && pip install -r backend-requirements.txt
 ```
 
 Start command:
@@ -52,6 +52,12 @@ Health check path:
 
 ```text
 /health
+```
+
+Python version:
+
+```text
+3.11.9
 ```
 
 ## Local Run
