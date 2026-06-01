@@ -2,12 +2,22 @@
 
 ## Frontend on Vercel
 
-Deploy the project root to Vercel. Vercel should only receive the static frontend files. The `.vercelignore` file excludes the Python backend, TensorFlow model, and virtual environment so the deployment stays under Vercel's size limits.
+Deploy the `frontend` folder to Vercel. This keeps Vercel from scanning the Flask/TensorFlow backend at all.
 
 ```powershell
 npm install -g vercel
 vercel login
 vercel
+```
+
+In Vercel project settings, use:
+
+```text
+Root Directory: frontend
+Framework Preset: Other
+Build Command: npm run build
+Output Directory: dist
+Install Command: npm install
 ```
 
 The Vercel link will show the frontend, but emotion prediction needs a deployed backend URL. After deploying the backend, open the Vercel URL once with:
