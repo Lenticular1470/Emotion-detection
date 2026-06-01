@@ -1,8 +1,12 @@
 .git
 .ipynb_checkpoints
 .venv
+app.py
 images
+models
 spam
+src
 test
+requirements.txt
 Procfile
 *.ipynb
